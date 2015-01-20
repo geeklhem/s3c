@@ -29,7 +29,7 @@ out = s3c.cwi(census, species)
 ``` 
 
 A full tutorial is available in the doc/ folder as an ipython notebook. You
-can consult a static version online.
+can consult a [static version online](http://nbviewer.ipython.org/github/geeklhem/s3c/blob/master/doc/tutorial.ipynb).
 
 
 ## License
