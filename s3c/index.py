@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
-
-default_col_names = ["n","trait_val","trait_var","date","site","species"]
-default_col_names = dict(zip(default_col_names,default_col_names))
+from s3c.columns import col_names_checker
 
 def mean(df,col_names):
     return np.dot(df[col_names["trait_val"]],
@@ -14,23 +12,67 @@ def var(df,col_names):
     diff = np.array([p*(i-av)**2 for i,p in zip(df[col_names["trait_val"]],df[col_names["n"]])])
     return diff.sum()/correct
 
-def cwm(census,traits,col_names=None):
 
-    ## Verification of columns names
-    if col_names is None:
-        col_names = default_col_names
-    else:
-        for k,v in col_names.items():
-            if k not in default_col_names:
-                raise ValueError("{} is not a valid column name".format(k))
-            if ((v not in census.columns)
-                and (v not in traits.columns)):
-                raise ValueError("column '{}' is not in the input".format(v))
-            
-    for n in default_col_names.keys():
-        if n not in col_names:
-            col_names[n] = n
-            
+def bootstrap_cwi(df,col_names,k,bootstrap_ci):
+    out = {}
+    cwm = np.zeros(k)
+    cwv = np.zeros(k)
+    N = df[col_names["n"]].sum()
+    # Get relative abundances
+    df[col_names["n"]] /= df[col_names["n"]].sum()
+    
+    # Sort by relative abundances to speed up computations.
+    df.sort(col_names["n"], ascending=False, inplace=True)
+    df.reset_index(inplace=True)
+    
+    df["proba"] =  df[col_names["n"]].cumsum()
+    sp = len(df.proba)
+    #print df.head()
+    #print df.tail()
+    #print df.proba.values
+    for i in range(k):
+        #print "bootstrap {}".format(i)
+        hist= np.digitize(np.random.rand(N),
+                           bins=df.proba.values)
+        df[col_names["n"]] = np.bincount(hist,minlength=sp)
+        cwm[i] = mean(df, col_names)
+        cwv[i] = var(df, col_names)
+
+    out["bootstrap_cwm"] = np.mean(cwm)
+    out["bootstrap_cwv"] = np.mean(cwv)
+    out["bootstrap_cwm_lower_ci"] = np.percentile(cwm,1-bootstrap_ci)
+    out["bootstrap_cwv_lower_ci"] = np.percentile(cwv,1-bootstrap_ci)
+    out["bootstrap_cwm_higher_ci"] = np.percentile(cwm,bootstrap_ci)
+    out["bootstrap_cwv_higher_ci"] = np.percentile(cwv,bootstrap_ci)
+
+    return out
+
+def cwi(census,traits,col_names=None, bootstrap = False, bootstrap_n = 100, bootstrap_ci=.95):
+    out = {}
+    col_names = col_names_checker(col_names,[census.columns,traits.columns])            
+
+    census = census.groupby(col_names["species"]).sum()[col_names["n"]].reset_index()
+    merged = pd.merge(census.loc[:,[col_names["species"],
+                                    col_names["n"]]],
+                      traits.loc[:,[col_names["species"],
+                                    col_names["trait_val"],
+                                    col_names["trait_var"]]])
+                      
+
+    out["cwm"] = mean(merged, col_names)
+    out["cwv"] = var(merged, col_names)
+
+    
+    if bootstrap:
+        out_boot = bootstrap_cwi(merged,col_names,bootstrap_n,bootstrap_ci)
+        out.update(out_boot)
+    return out
+
+
+def cwi_stratified(census,traits,col_names=None):
+
+    col_names = col_names_checker(col_names,[census.columns,traits.columns])
+               
     out = {"cwm":[],
            "cwv":[],
            col_names["date"]:[],
