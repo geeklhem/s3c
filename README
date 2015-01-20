@@ -1,4 +1,40 @@
-Specific Contributions to Community Changes
--------------------------------------------
+# Specific Contributions to Community Changes
 
+__s3c__ (_Specific Contributions to Community Changes_) is small
+python package was written to compute community weighted indices and
+specific contributions in their variations.
+
+## Install
+
+_s3c_ requires the following python packages: numpy, pandas, matplotlib.
+
+```bash
+# Global install (for all users):
+$ sudo pip install -U https://github.com/geeklhem/s3c/zipball/master 
+# Local install (for the current user only, do not need root privileges):
+$ pip install --user -U https://github.com/geeklhem/s3c/zipball/master
+# To uninstall 
+$ sudo pip uninstall s3c
+``` 
+
+## Tutorial
+
+Quick-start: 
+
+```python
+# Provided census and species are well formatted pandas DataFrames.
+import s3c
+out = s3c.cwi(census, species)
+>>> {'cwm': 50.751824869437755, 'cwv': 2423988.1655900856}
+``` 
+
+A full tutorial is available in the doc/ folder as an ipython notebook. You
+can consult a static version online.
+
+
+## License
+
+This program is distributed under the term of the GNU General Public
+License v3 (or later) with ABSOLUTELY NO WARRANTY. This is free
+software, and you are welcome to redistribute it. 
 
