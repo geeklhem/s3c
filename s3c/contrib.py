@@ -2,7 +2,23 @@ import pandas as pd
 import numpy as np
 from s3c.columns import col_names_checker
 
-def contrib(census_i, census_f, species,col_names=None):
+def contrib(census_i, census_f, species, col_names=None):
+    """Compute specific contribution to community weighted indexes variations
+    
+    Args:
+        census_i (pandas.DataFrame): Initial census dataframe. Required columns are
+            "n" (number of individual), "species".
+        census_f (pandas.DataFrame): Final census dataframe. Required columns are
+            "n" (number of individual), "species".
+        traits (pandas.DataFrame): trait value dataframe. Required columns are
+            "species", "trait_val" (trait value) and "trait_var" (trait 
+            intraspecific variance).
+        col_names (dict): Columns names correspondance if they are not default.
+
+    Returns:
+        A pandas.Dataframe with the specific contribution and its decomposition. 
+    """
+    # Check columns name sanity.
     col_names = col_names_checker(col_names,[census_f.columns,census_i.columns,species])
     
     # Group observations by species and merge them. 
@@ -20,8 +36,6 @@ def contrib(census_i, census_f, species,col_names=None):
                              col_names["trait_val"],
                              col_names["trait_var"])]
     
-  
-
     census = pd.merge(census,species,
                       left_on=col_names["species"],right_on=col_names["species"],
                       how="left")
