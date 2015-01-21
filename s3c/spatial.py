@@ -21,7 +21,7 @@ def distances(sites,col_names=None):
     # Check columns name sanity and drop unwanted columns.
     col_names = col_names_checker(col_names,[sites.columns])            
     sites = sites.set_index(col_names["site"])
-    sites = sites.loc[:,col_names["x"],col_names["y"]]
+    sites = sites.loc[:,[col_names["x"],col_names["y"]]]
     
     #Distance between two sites
     for a,b in combinations(sites.index,2):
