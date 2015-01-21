@@ -27,12 +27,11 @@ def var(df,col_names):
 
     Return: 
         Community weighted variance (float).""" 
-    av = mean(df,col_names)
-    correct = (df[col_names["n"]]/float(df[col_names["n"]].sum())).sum()
-    diff = np.array([p*(i-av)**2 for i,p
-                     in zip(df[col_names["trait_val"]],
-                            df[col_names["n"]])])
-    return diff.sum()/correct
+    av = mean(df, col_names)
+    corrective_term = df[col_names["n"]].sum()/(df[col_names["n"]].sum()-1)
+    n2 = np.dot(df[col_names["trait_val"]]**2,
+                df[col_names["n"]]/float(df[col_names["n"]].sum()))    
+    return corrective_term * (n2 - av**2) 
 
 
 def bootstrap_cwi(df,col_names,k,bootstrap_ci):
