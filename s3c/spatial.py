@@ -19,7 +19,7 @@ def kde(census,distance,kernel,threshold=10,dampening=3):
     if kernel == "threshold":
         kernel = lambda d: d<=threshold
     elif kernel == "linear":
-        kernel = lambda d: -dampening*d
+        kernel = lambda d: 1-dampening*d
     elif kernel == "gaussian":
         kernel = lambda d: 1/(dampening * np.sqrt(2*np.pi)) * np.exp(-d**2/2*dampening**2)
     else:
