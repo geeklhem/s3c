@@ -17,21 +17,24 @@ def mean(df,col_names):
     return np.dot(df[col_names["trait_val"]],
                   df[col_names["n"]]/float(df[col_names["n"]].sum()))
 
-def var(df,col_names):
+def var(df,col_names,cwm=None):
     """ Compute the community weighted variance of the dataframe.
 
     Args:
         df (pandas.DataFrame): Census dataframe.
         col_names (dict): Columns names. Required names are "n" (number
             of individuals) and "trait_val" (trait value).
-
+        cwm (float): Community weighted means (optional, it is only to 
+            speed up computations)
     Return: 
-        Community weighted variance (float).""" 
-    av = mean(df, col_names)
+        Community weighted variance (float)."""
+
+    if cwm is None:
+        cwm = mean(df, col_names)
     corrective_term = df[col_names["n"]].sum()/(df[col_names["n"]].sum()-1)
     n2 = np.dot(df[col_names["trait_val"]]**2,
                 df[col_names["n"]]/float(df[col_names["n"]].sum()))    
-    return corrective_term * (n2 - av**2) 
+    return corrective_term * (n2 - cwm**2) 
 
 
 def bootstrap_cwi(df,col_names,k,bootstrap_ci):
@@ -77,7 +80,7 @@ def bootstrap_cwi(df,col_names,k,bootstrap_ci):
 
         # Compute the indicies. 
         cwm[i] = mean(df, col_names)
-        cwv[i] = var(df, col_names)
+        cwv[i] = var(df, col_names,cwm[i])
 
     # Bootstrap estimators are derived from the bootstrap distribution. 
     out["bootstrap_cwm"] = np.mean(cwm)
@@ -127,7 +130,7 @@ def cwi(census, traits, col_names=None,
     # Compute indexes.
     out = {}
     out["cwm"] = mean(merged, col_names)
-    out["cwv"] = var(merged, col_names)
+    out["cwv"] = var(merged, col_names,out["cwm"])
 
     # Perform bootstrap if needed.
     if bootstrap:
@@ -191,7 +194,7 @@ def cwi_stratified(census,traits,col_names=None,
             
             # Compute indices
             out[-1]["cwm"] = mean(ddf, col_names)
-            out[-1]["cwv"] = var(ddf, col_names)
+            out[-1]["cwv"] = var(ddf, col_names,out[-1]["cwm"])
 
             # Bootstrap if needed
             if bootstrap:
