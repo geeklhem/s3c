@@ -2,7 +2,7 @@ import numpy as np
 
 def col_names_checker(col_names,
                       existing,
-                      default=["n","trait_val","trait_var","date","site","species"]):
+                      default=["n","trait_val","trait_var","date","site","species","x","y"]):
     default_col_names = dict(zip(default,default))
 
     ## Verification of columns names

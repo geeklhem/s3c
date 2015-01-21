@@ -1,3 +1,4 @@
+""" index.py - Functions to compute community weighted indexes """
 import numpy as np
 import pandas as pd
 from s3c.columns import col_names_checker
