@@ -44,6 +44,15 @@ def contrib(census_i, census_f, species, col_names=None):
     # Originality is the diffenrence to the mean trait value.
     mean = census[col_names["trait_val"]].mean()
     census["originality"] = census[col_names["trait_val"]] - mean
+    
+    # Variance originality
+    mean_squared = (census[col_names["trait_val"]]**2).mean()
+    census["v_originality"] = census[col_names["trait_val"]]**2 - mean
+
+    # Variance cross corrective term.
+    census["v_cross"] = 0
+
+    # Drop unwanted columns
     census.drop([col_names["trait_val"],col_names["trait_var"]],1,inplace=True)
     
     # Compute differences in relative abundances.
@@ -54,5 +63,7 @@ def contrib(census_i, census_f, species, col_names=None):
 
     # Contribution is the product originalitt * dp.
     census["contrib"] = census["originality"] * census["dp"]
-
+    census["v_contrib"] = census["dp"] * (census["v_originality"] - census["v_cross"])  
+    
+    
     return census
