@@ -85,15 +85,15 @@ def bootstrap_cwi(df,col_names,k,bootstrap_ci):
     # Bootstrap estimators are derived from the bootstrap distribution. 
     out["bootstrap_cwm"] = np.mean(cwm)
     out["bootstrap_cwv"] = np.mean(cwv)
-    out["bootstrap_cwm_lower_ci"] = np.percentile(cwm,1-bootstrap_ci)
-    out["bootstrap_cwv_lower_ci"] = np.percentile(cwv,1-bootstrap_ci)
+    out["bootstrap_cwm_lower_ci"] = np.percentile(cwm,100-bootstrap_ci)
+    out["bootstrap_cwv_lower_ci"] = np.percentile(cwv,100-bootstrap_ci)
     out["bootstrap_cwm_higher_ci"] = np.percentile(cwm,bootstrap_ci)
     out["bootstrap_cwv_higher_ci"] = np.percentile(cwv,bootstrap_ci)
 
     return out
 
 def cwi(census, traits, col_names=None,
-        bootstrap = False, bootstrap_n = 100, bootstrap_ci=.95):
+        bootstrap = False, bootstrap_n = 100, bootstrap_ci=95):
     """ Compute community weighted indexes of a community.
 
     Bootstrap is performed /at individual level/. 
