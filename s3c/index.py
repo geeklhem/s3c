@@ -169,11 +169,11 @@ def cwi_stratified(census,traits,col_names=None,
     drop_date = False
     drop_site = False 
     if col_names["date"] not in census.columns:
-        census[col_names["date"]] == None
+        census[col_names["date"]] = ""
         drop_date = True
     if col_names["site"] not in census.columns:
-        census[col_names["site"]] == None
-        drop_site = True 
+        census[col_names["site"]] = ""
+        drop_site = True
 
     # Prepare output. 
     out = []
@@ -198,7 +198,7 @@ def cwi_stratified(census,traits,col_names=None,
 
             # Bootstrap if needed
             if bootstrap:
-                out_boot = bootstrap_cwi(merged,
+                out_boot = bootstrap_cwi(ddf.copy(),
                                          col_names,
                                          bootstrap_n,
                                          bootstrap_ci)
@@ -209,7 +209,9 @@ def cwi_stratified(census,traits,col_names=None,
             out[-1][col_names["site"]] = site
             out[-1][col_names["n"]] = ddf[col_names["n"]].sum()
 
+
     out = pd.DataFrame(out)
+
     # Drop unused columns
     if drop_date:
         out.drop(col_names["date"], 1, inplace=True)
