@@ -145,19 +145,11 @@ def trend_contrib(census, species, col_names = None):
     census = pd.merge(census, species,
                       how="left",
                       right_index=True, left_on=col_names["species"])
-    for date, df in census.groupby("date"):
-        indices.append(compute_cwm(df, col_names))
-        dates.append(date)
-    A = np.vstack([dates, np.ones(len(dates))]).T
-    slope, intercept = np.linalg.lstsq(A, indices)[0]
-    S = 2 * intercept + slope * (min(census[col_names["date"]])
-                                 +  max(census[col_names["date"]]))
-
-    # select_i = "{}=={}".format(col_names["date"], census[col_names["date"]].min())
-    # select_f = "{}=={}".format(col_names["date"], census[col_names["date"]].max())
+    select_i = "{}=={}".format(col_names["date"], census[col_names["date"]].min())
+    select_f = "{}=={}".format(col_names["date"], census[col_names["date"]].max())
     
-    # S = (compute_cwm(census.query(select_i), col_names) 
-    #      + compute_cwm(census.query(select_f), col_names))
+    S = (compute_cwm(census.query(select_i), col_names) 
+         + compute_cwm(census.query(select_f), col_names))
                      
                      
     # Compute contributions
