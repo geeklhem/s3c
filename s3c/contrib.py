@@ -57,14 +57,12 @@ def contrib(census_i, census_f, species, col_names=None):
     squared_mean = (census[col_names["trait_val"]]**2).mean()
     census["v_originality"] = census[col_names["trait_val"]]**2 - squared_mean
 
-    # Variance cross corrective term.
+    # Sum of initial and final CWM
     cnames_i = col_names.copy()
     cnames_i["n"] = col_names["n"] + "_i"
     cnames_f = col_names.copy()
     cnames_f["n"] = col_names["n"] + "_f"
-
     S = s3c.index.mean(census,cnames_f) + s3c.index.mean(census,cnames_i)
-    census["v_cross"] =  census["originality"] * S
 
     # Drop unwanted columns
     census.drop([col_names["trait_val"],col_names["trait_var"]],1,inplace=True)
@@ -77,7 +75,7 @@ def contrib(census_i, census_f, species, col_names=None):
 
     # Contribution is the product originalitt * dp.
     census["contrib"] = census["originality"] * census["dp"]
-    census["v_contrib"] = census["dp"] * (census["v_originality"] - census["v_cross"])  
+    census["v_contrib"] = census["dp"] * (census["v_originality"] - census["originality"] * S)  
         
     return census
 
@@ -100,20 +98,24 @@ def trend_contrib(census, species, col_names = None):
     # Check columns name sanity.
     col_names = col_names_checker(col_names,[census.columns,species.columns])
 
-    # Present species.
+    # Filter to keep only present species.
     present_sp = census[col_names["species"]].drop_duplicates()
-
+    species = species.loc[present_sp,:]
+    
     # If no known intraspecific variations, fix them to 0
     if col_names["trait_var"] not in species.columns:
         species[col_names["trait_var"]] = 0
 
     # Compute originality.
     species = species.set_index(col_names["species"])
-    mean = species.loc[present_sp,col_names["trait_val"]].mean()
-    squared_mean = (species.loc[present_sp,col_names["trait_val"]]**2).mean()
+    mean = species.loc[:,col_names["trait_val"]].mean()
+    squared_mean = (species.loc[:,col_names["trait_val"]]**2
+                    + species.loc[:,col_names["trait_var"]]).mean()
 
     species["originality"] = species[col_names["trait_val"]] - mean
-    species["v_originality"] = species[col_names["trait_val"]]**2 - squared_mean
+    species["v_originality"] = (species[col_names["trait_val"]]**2
+                                + species[col_names["trait_var"]]
+                                - squared_mean
 
     # Compute relative abundance trends.
     dp = {}
@@ -131,17 +133,17 @@ def trend_contrib(census, species, col_names = None):
     census[col_names["n"]] /= census["total"]
 
     for spe,df in census.groupby(col_names["species"]):
-        #rewrite the line equation as y = Ap, where A = [[x 1]]
+        #Linear regression y = Ap, where A = [[x 1]]
         A = np.vstack([df[col_names["date"]].values,
                        np.ones(len(df[col_names["date"]].values))]).T
         dp[spe] = np.linalg.lstsq(A,
                                   df[col_names["n"]].values)[0][0]
     species["dp"] = pd.Series(dp)
 
-    # Compute cross terms
-    species["v_cross"] = 0
-    
+    # Compute contributions 
     species["contrib"] = species["originality"] * species["dp"]
-    species["v_contrib"] = species["dp"] * (species["v_originality"] - species["v_cross"])  
+    species["v_contrib"] = species["dp"] * (species["v_originality"] - census["originality"] * S)
+
+    # Sort output
     species = species.sort("contrib", ascending=False)
     return species.reset_index()
