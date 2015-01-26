@@ -1,4 +1,5 @@
 """ index.py - Functions to compute community weighted indexes """
+from __future__ import division
 import numpy as np
 import pandas as pd
 from s3c.columns import col_names_checker
@@ -31,7 +32,7 @@ def var(df,col_names,cwm=None):
 
     if cwm is None:
         cwm = mean(df, col_names)
-    corrective_term = df[col_names["n"]].sum()/(df[col_names["n"]].sum()-1)
+    corrective_term = df[col_names["n"]].sum()/(df[col_names["n"]].sum()-1.0)
     n2 = np.dot(df[col_names["trait_val"]]**2,
                 df[col_names["n"]]/float(df[col_names["n"]].sum()))    
     return corrective_term * (n2 - cwm**2) 
