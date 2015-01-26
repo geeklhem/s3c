@@ -1,6 +1,6 @@
 import pandas as pd 
 import numpy as np
-import s3c.index 
+from s3c.index import mean as compute_cwm
 from s3c.columns import col_names_checker
 
 def contrib(census_i, census_f, species, col_names=None):
@@ -46,8 +46,7 @@ def contrib(census_i, census_f, species, col_names=None):
     
     census = pd.merge(census,species,
                       left_on=col_names["species"],right_on=col_names["species"],
-                      how="left")
-  
+                      how="left") 
 
     # Originality is the diffenrence to the mean trait value.
     mean = census[col_names["trait_val"]].mean()
@@ -62,7 +61,7 @@ def contrib(census_i, census_f, species, col_names=None):
     cnames_i["n"] = col_names["n"] + "_i"
     cnames_f = col_names.copy()
     cnames_f["n"] = col_names["n"] + "_f"
-    S = s3c.index.mean(census,cnames_f) + s3c.index.mean(census,cnames_i)
+    S = compute_cwm(census,cnames_f) + compute_cwm(census,cnames_i)
 
     # Drop unwanted columns
     census.drop([col_names["trait_val"],col_names["trait_var"]],1,inplace=True)
@@ -100,6 +99,7 @@ def trend_contrib(census, species, col_names = None):
 
     # Filter to keep only present species.
     present_sp = census[col_names["species"]].drop_duplicates()
+    species = species.set_index(col_names["species"])
     species = species.loc[present_sp,:]
     
     # If no known intraspecific variations, fix them to 0
@@ -107,7 +107,6 @@ def trend_contrib(census, species, col_names = None):
         species[col_names["trait_var"]] = 0
 
     # Compute originality.
-    species = species.set_index(col_names["species"])
     mean = species.loc[:,col_names["trait_val"]].mean()
     squared_mean = (species.loc[:,col_names["trait_val"]]**2
                     + species.loc[:,col_names["trait_var"]]).mean()
@@ -115,7 +114,7 @@ def trend_contrib(census, species, col_names = None):
     species["originality"] = species[col_names["trait_val"]] - mean
     species["v_originality"] = (species[col_names["trait_val"]]**2
                                 + species[col_names["trait_var"]]
-                                - squared_mean
+                                - squared_mean)
 
     # Compute relative abundance trends.
     dp = {}
@@ -140,9 +139,30 @@ def trend_contrib(census, species, col_names = None):
                                   df[col_names["n"]].values)[0][0]
     species["dp"] = pd.Series(dp)
 
-    # Compute contributions 
+    # Compute S
+    dates = []
+    indices = []
+    census = pd.merge(census, species,
+                      how="left",
+                      right_index=True, left_on=col_names["species"])
+    for date, df in census.groupby("date"):
+        indices.append(compute_cwm(df, col_names))
+        dates.append(date)
+    A = np.vstack([dates, np.ones(len(dates))]).T
+    slope, intercept = np.linalg.lstsq(A, indices)[0]
+    S = 2 * intercept + slope * (min(census[col_names["date"]])
+                                 +  max(census[col_names["date"]]))
+
+    # select_i = "{}=={}".format(col_names["date"], census[col_names["date"]].min())
+    # select_f = "{}=={}".format(col_names["date"], census[col_names["date"]].max())
+    
+    # S = (compute_cwm(census.query(select_i), col_names) 
+    #      + compute_cwm(census.query(select_f), col_names))
+                     
+                     
+    # Compute contributions
     species["contrib"] = species["originality"] * species["dp"]
-    species["v_contrib"] = species["dp"] * (species["v_originality"] - census["originality"] * S)
+    species["v_contrib"] = species["dp"] * (species["v_originality"] - species["originality"] * S)
 
     # Sort output
     species = species.sort("contrib", ascending=False)
