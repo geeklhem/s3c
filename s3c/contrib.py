@@ -4,7 +4,8 @@ import s3c.index
 from s3c.columns import col_names_checker
 
 def contrib(census_i, census_f, species, col_names=None):
-    """Compute specific contribution to community weighted indexes variations
+    """Compute specific contribution to community weighted indexes
+    variations between two timepoint
     
     Args:
         census_i (pandas.DataFrame): Initial census dataframe. Required columns are
@@ -12,18 +13,23 @@ def contrib(census_i, census_f, species, col_names=None):
         census_f (pandas.DataFrame): Final census dataframe. Required columns are
             "n" (number of individual), "species".
         traits (pandas.DataFrame): trait value dataframe. Required columns are
-            "species", "trait_val" (trait value) and "trait_var" (trait 
+            "species", "trait_val" (trait value) and optionnally "trait_var" (trait 
             intraspecific variance).
         col_names (dict): Columns names correspondance if they are not default.
 
     Returns:
-        A pandas.Dataframe with the specific contribution and its decomposition. 
+        A pandas.Dataframe with the specific contribution and its decomposition.
+
     """
     # Check columns name sanity.
     col_names = col_names_checker(col_names,[census_f.columns,
                                              census_i.columns,
                                              species.columns])
-    
+
+    # If no known intraspecific variations, fix them to 0
+    if col_names["trait_var"] not in species.columns:
+        species[col_names["trait_var"]] = 0
+
     # Group observations by species and merge them. 
     census_i = census_i.groupby(col_names["species"]).sum()[col_names["n"]].reset_index()
     census_f = census_f.groupby(col_names["species"]).sum()[col_names["n"]].reset_index()
@@ -32,7 +38,7 @@ def contrib(census_i, census_f, species, col_names=None):
                       suffixes=("_i","_f"),
                       how="outer").fillna(0)
     
-
+    
     # Filter species list and merge them.
     species = species.loc[:,(col_names["species"],
                              col_names["trait_val"],
@@ -76,11 +82,30 @@ def contrib(census_i, census_f, species, col_names=None):
     return census
 
 def trend_contrib(census, species, col_names = None):
+    """Compute specific contribution to community weighted indexes variations through 
+    time using linear tendencies. 
+    
+    Args:
+        census_i (pandas.DataFrame): Initial census dataframe. Required columns are
+            "n" (number of individuals), "species" and "date".
+        traits (pandas.DataFrame): trait value dataframe. Required columns are
+            "species", "trait_val" (trait value) and optionnaly "trait_var" (trait 
+            intraspecific variance).
+        col_names (dict): Columns names correspondance if they are not default.
+
+    Returns:
+        A pandas.Dataframe with the specific contribution and its decomposition. 
+    """
+
     # Check columns name sanity.
     col_names = col_names_checker(col_names,[census.columns,species.columns])
 
     # Present species.
     present_sp = census[col_names["species"]].drop_duplicates()
+
+    # If no known intraspecific variations, fix them to 0
+    if col_names["trait_var"] not in species.columns:
+        species[col_names["trait_var"]] = 0
 
     # Compute originality.
     species = species.set_index(col_names["species"])
