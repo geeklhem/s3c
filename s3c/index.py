@@ -18,7 +18,7 @@ def mean(df,col_names):
     return np.dot(df[col_names["trait_val"]],
                   df[col_names["n"]]/float(df[col_names["n"]].sum()))
 
-def var(df,col_names,cwm=None):
+def var(df,col_names, bessel, cwm=None):
     """ Compute the community weighted variance of the dataframe.
 
     Args:
@@ -27,18 +27,23 @@ def var(df,col_names,cwm=None):
             of individuals) and "trait_val" (trait value).
         cwm (float): Community weighted means (optional, it is only to 
             speed up computations)
+        bessel (bool): If true, use bessel correction for an unbiased variance
+            estimator (N/(N-1)).
     Return: 
         Community weighted variance (float)."""
 
     if cwm is None:
         cwm = mean(df, col_names)
-    corrective_term = df[col_names["n"]].sum()/(df[col_names["n"]].sum()-1.0)
+    if bessel:
+        corrective_term = df[col_names["n"]].sum()/(df[col_names["n"]].sum()-1.0)
+    else:
+        corrective_term = 1
     n2 = np.dot(df[col_names["trait_val"]]**2,
                 df[col_names["n"]]/float(df[col_names["n"]].sum()))    
     return corrective_term * (n2 - cwm**2) 
 
 
-def bootstrap_cwi(df,col_names,k,bootstrap_ci):
+def bootstrap_cwi(df,col_names,k,bootstrap_ci,bessel):
     """ Bootstrap estimator of CWM/CWV.
 
     Bootstrap is performed /at individual level/. 
@@ -49,6 +54,8 @@ def bootstrap_cwi(df,col_names,k,bootstrap_ci):
             of individuals) and "trait_val" (trait value).
         k (int): Number of bootstrap re-sampling.
         bootstrap_ci (float): Percentile of bootstrap confidence interval.
+        bessel (bool): If true, use bessel correction for an unbiased variance
+            estimator (N/(N-1)).
 
     Returns:
         A dict. with the bootstrap estimators of CWM/CWV and the 
@@ -81,7 +88,7 @@ def bootstrap_cwi(df,col_names,k,bootstrap_ci):
 
         # Compute the indicies. 
         cwm[i] = mean(df, col_names)
-        cwv[i] = var(df, col_names,cwm[i])
+        cwv[i] = var(df, col_names, bessel, cwm[i])
 
     # Bootstrap estimators are derived from the bootstrap distribution. 
     out["bootstrap_cwm"] = np.mean(cwm)
@@ -94,7 +101,8 @@ def bootstrap_cwi(df,col_names,k,bootstrap_ci):
     return out
 
 def cwi(census, traits, col_names=None,
-        bootstrap = False, bootstrap_n = 100, bootstrap_ci=95):
+        bootstrap = False, bootstrap_n = 100, bootstrap_ci=95,
+        bessel = True):
     """ Compute community weighted indexes of a community.
 
     Bootstrap is performed /at individual level/. 
@@ -109,6 +117,8 @@ def cwi(census, traits, col_names=None,
         bootstrap (bool): Perform bootstrap if true.
         bootstrap_n (int): Number of bootstrap re-sampling.
         bootstrap_ci (float): Percentile of bootstrap confidence interval.
+        bessel (bool): If true, use bessel correction for an unbiased variance
+            estimator (N/(N-1)).
 
     Returns:
         A dict. with the bootstrap estimators of CWM/CWV and the 
@@ -131,18 +141,19 @@ def cwi(census, traits, col_names=None,
     # Compute indexes.
     out = {}
     out["cwm"] = mean(merged, col_names)
-    out["cwv"] = var(merged, col_names,out["cwm"])
+    out["cwv"] = var(merged, col_names, bessel, out["cwm"])
 
     # Perform bootstrap if needed.
     if bootstrap:
-        out_boot = bootstrap_cwi(merged,col_names,bootstrap_n,bootstrap_ci)
+        out_boot = bootstrap_cwi(merged, col_names, bootstrap_n, bootstrap_ci, bessel)
         out.update(out_boot)
         
     return out
 
 
 def cwi_stratified(census,traits,col_names=None,
-                   bootstrap = False, bootstrap_n = 100, bootstrap_ci=.95):
+                   bootstrap = False, bootstrap_n = 100, bootstrap_ci=.95,
+                   bessel = True):
     """ Stratified computation of community weighted indexes of a community.
 
     Observations will be grouped by site and date.
@@ -159,6 +170,8 @@ def cwi_stratified(census,traits,col_names=None,
         bootstrap (bool): Perform bootstrap if true.
         bootstrap_n (int): Number of bootstrap re-sampling.
         bootstrap_ci (float): Percentile of bootstrap confidence interval.
+        bessel (bool): If true, use bessel correction for an unbiased variance
+            estimator (N/(N-1)).
 
     Returns:
         A dict. with the bootstrap estimators of CWM/CWV and the 
@@ -195,7 +208,7 @@ def cwi_stratified(census,traits,col_names=None,
             
             # Compute indices
             out[-1]["cwm"] = mean(ddf, col_names)
-            out[-1]["cwv"] = var(ddf, col_names,out[-1]["cwm"])
+            out[-1]["cwv"] = var(ddf, col_names, bessel, out[-1]["cwm"])
 
             # Bootstrap if needed
             if bootstrap:
